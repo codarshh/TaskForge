@@ -145,7 +145,7 @@ export default function FuturePlanner() {
       </div>
 
       {/* Main Grid: Date Panel & Task list */}
-      <div className="grid-3" style={{ gridTemplateColumns: '1fr 2fr' }}>
+      <div className="planner-layout-grid">
         {/* Date summary panel */}
         <div className="glass-panel" style={{ padding: '1.75rem', height: 'fit-content' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--accent-primary)', marginBottom: '1rem' }}>

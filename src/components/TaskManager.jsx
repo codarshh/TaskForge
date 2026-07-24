@@ -28,7 +28,9 @@ export default function TaskManager() {
     toggleTaskCompleted, 
     moveTaskStatus,
     updateTask, 
-    deleteTask 
+    deleteTask,
+    taskViewMode,
+    updateTaskViewMode
   } = useContext(AppContext);
 
   // Filter & Search states
@@ -37,7 +39,8 @@ export default function TaskManager() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedPriority, setSelectedPriority] = useState('All');
   const [sortBy, setSortBy] = useState('createdAt'); // 'createdAt' | 'priority' | 'dueTime' | 'estimatedTime'
-  const [viewMode, setViewMode] = useState(() => localStorage.getItem('taskforge_view_preference') || 'kanban');
+  const viewMode = taskViewMode;
+  const setViewMode = updateTaskViewMode;
   const [draggedOverCol, setDraggedOverCol] = useState(null);
 
   // HTML5 Drag and Drop handlers

@@ -13,30 +13,50 @@ import {
   Flame,
   Sun,
   Moon,
-  Sparkles
+  Sparkles,
+  ChevronLeft,
+  ChevronRight,
+  X
 } from 'lucide-react';
 
-const PLATFORM_META = {
-  leetcode: { name: 'LeetCode', logo: '🟠' },
-  codeforces: { name: 'Codeforces', logo: '🔵' },
-  github: { name: 'GitHub', logo: '⚫' },
-  codechef: { name: 'CodeChef', logo: '🟢' },
-  hackerrank: { name: 'HackerRank', logo: '🟣' },
-  geeksforgeeks: { name: 'GeeksforGeeks', logo: '🟢' }
-};
-
-export default function Sidebar({ activeTab, setActiveTab }) {
+export default function Sidebar({ 
+  activeTab, 
+  setActiveTab, 
+  isSidebarOpen, 
+  setIsSidebarOpen, 
+  isSidebarCollapsed, 
+  setIsSidebarCollapsed 
+}) {
   const { 
     user, 
     logout, 
     streak, 
     theme, 
-    toggleTheme, 
-    openDevPlatform, 
-    currentDevPlatformTab 
+    toggleTheme 
   } = useContext(AppContext);
 
-  const [isHubExpanded, setIsHubExpanded] = useState(true);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    if (isLeftSwipe && isSidebarOpen) {
+      setIsSidebarOpen(false);
+    }
+  };
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -52,25 +72,56 @@ export default function Sidebar({ activeTab, setActiveTab }) {
   if (!user) return null;
 
   return (
-    <aside className="sidebar">
+    <aside 
+      className={`sidebar ${isSidebarCollapsed ? 'collapsed' : ''} ${isSidebarOpen ? 'open' : ''}`}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      {/* Mobile Drawer Close Button */}
+      {isSidebarOpen && (
+        <button 
+          className="sidebar-mobile-close-btn" 
+          onClick={() => setIsSidebarOpen(false)}
+          title="Close Sidebar"
+        >
+          <X size={20} />
+        </button>
+      )}
+
       <div className="sidebar-logo">
-        <Sparkles size={24} style={{ color: 'var(--accent-primary)' }} />
-        <span>TaskForge</span>
+        <Sparkles size={24} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+        {!isSidebarCollapsed && <span>TaskForge</span>}
+        
+        {/* Toggle Button for Tablet/Desktop Collapsing */}
+        <button 
+          className="sidebar-collapse-btn" 
+          onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        >
+          {isSidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+        </button>
       </div>
 
       <div className="sidebar-profile">
-        <div className="sidebar-avatar">
+        <div 
+          className="sidebar-avatar" 
+          onClick={() => setActiveTab('profile')} 
+          style={{ cursor: 'pointer', flexShrink: 0 }}
+        >
           {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
         </div>
-        <div className="sidebar-profile-info">
-          <div className="sidebar-username">{user.username}</div>
-          {streak.current > 0 && (
-            <div className="sidebar-streak-badge">
-              <Flame size={12} fill="#f59e0b" />
-              <span>{streak.current} Day Streak</span>
-            </div>
-          )}
-        </div>
+        {!isSidebarCollapsed && (
+          <div className="sidebar-profile-info">
+            <div className="sidebar-username">{user.username}</div>
+            {streak.current > 0 && (
+              <div className="sidebar-streak-badge">
+                <Flame size={12} fill="#f59e0b" />
+                <span>{streak.current} Day Streak</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <nav className="sidebar-nav">
@@ -81,24 +132,33 @@ export default function Sidebar({ activeTab, setActiveTab }) {
               key={item.id}
               className={`sidebar-nav-item ${activeTab === item.id ? 'active' : ''}`}
               onClick={() => setActiveTab(item.id)}
+              title={isSidebarCollapsed ? item.label : ''}
             >
-              <Icon size={20} />
-              <span>{item.label}</span>
+              <Icon size={20} style={{ flexShrink: 0 }} />
+              {!isSidebarCollapsed && <span>{item.label}</span>}
             </div>
           );
         })}
       </nav>
 
-
       <div className="sidebar-footer">
-        <button className="sidebar-nav-item" onClick={toggleTheme}>
-          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-          <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+        <button 
+          className="sidebar-nav-item" 
+          onClick={toggleTheme}
+          title={isSidebarCollapsed ? (theme === 'dark' ? 'Light Mode' : 'Dark Mode') : ''}
+        >
+          {theme === 'dark' ? <Sun size={20} style={{ flexShrink: 0 }} /> : <Moon size={20} style={{ flexShrink: 0 }} />}
+          {!isSidebarCollapsed && <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>}
         </button>
         
-        <button className="sidebar-nav-item" onClick={logout} style={{ color: '#ef4444' }}>
-          <LogOut size={20} />
-          <span>Reset Session</span>
+        <button 
+          className="sidebar-nav-item" 
+          onClick={logout} 
+          style={{ color: '#ef4444' }}
+          title={isSidebarCollapsed ? 'Reset Session' : ''}
+        >
+          <LogOut size={20} style={{ flexShrink: 0 }} />
+          {!isSidebarCollapsed && <span>Reset Session</span>}
         </button>
       </div>
     </aside>

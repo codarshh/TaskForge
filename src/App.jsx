@@ -12,12 +12,21 @@ import Analytics from './components/Analytics';
 import Profile from './components/Profile';
 import Settings from './components/Settings';
 import EmbeddedViewer from './components/EmbeddedViewer';
+import TopNavbar from './components/TopNavbar';
+import MobileDrawer from './components/MobileDrawer';
 
 function AppContent() {
   const { isAuthenticated, tasks } = useContext(AppContext);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [celebrate, setCelebrate] = useState(false);
   const [confettiPieces, setConfettiPieces] = useState([]);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  // Close mobile drawer when active tab changes
+  useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [activeTab]);
 
   // Handle remember me session cleanup on unload
   useEffect(() => {
@@ -107,7 +116,7 @@ function AppContent() {
   }
 
   return (
-    <div className="app-container animate-fade-in">
+    <div className={`app-container animate-fade-in ${isSidebarCollapsed ? 'sidebar-collapsed' : ''} ${isSidebarOpen ? 'sidebar-open' : ''}`}>
       {/* Confetti Celebration Overlay */}
       {celebrate && (
         <div className="confetti-container">
@@ -129,8 +138,32 @@ function AppContent() {
         </div>
       )}
 
-      {/* Main sidebar */}
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      {/* Top Navbar for mobile/tablet */}
+      <TopNavbar 
+        setIsSidebarOpen={setIsSidebarOpen} 
+        setIsSidebarCollapsed={setIsSidebarCollapsed}
+        isSidebarCollapsed={isSidebarCollapsed}
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+      />
+
+      {/* Mobile navigation drawer */}
+      <MobileDrawer 
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+      />
+
+      {/* Main sidebar (Desktop/Tablet) */}
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+        isSidebarCollapsed={isSidebarCollapsed}
+        setIsSidebarCollapsed={setIsSidebarCollapsed}
+      />
 
       {/* Content wrapper */}
       <main className="main-content">

@@ -73,6 +73,14 @@ export const AppProvider = ({ children }) => {
   const [theme, setTheme] = useState('dark');
   const themeVars = themeVariables[theme] || themeVariables.dark;
 
+  // Global Task View Mode (List vs Kanban)
+  const [taskViewMode, setTaskViewMode] = useState(() => localStorage.getItem('taskforge_view_preference') || 'kanban');
+
+  const updateTaskViewMode = (mode) => {
+    setTaskViewMode(mode);
+    localStorage.setItem('taskforge_view_preference', mode);
+  };
+
   // Load User Theme on Startup
   useEffect(() => {
     const savedTheme = user 
@@ -1153,6 +1161,8 @@ export const AppProvider = ({ children }) => {
         moveTaskStatus,
         updateTask,
         deleteTask,
+        taskViewMode,
+        updateTaskViewMode,
 
         // Future Planner
         futureTasks,

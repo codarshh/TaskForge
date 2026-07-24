@@ -83,7 +83,7 @@ export default function Dashboard({ setActiveTab }) {
       </div>
 
       {/* Grid: 3 Main Cards */}
-      <div className="grid-3">
+      <div className="grid-3 dashboard-stats-scroll-wrapper">
         {/* Card 1: Today's Completion Circle */}
         <div className="glass-panel stat-card" style={{ padding: '1rem 1.25rem' }}>
           <div className="stat-card-glow"></div>
@@ -186,7 +186,7 @@ export default function Dashboard({ setActiveTab }) {
       </div>
 
       {/* Contribution Heatmap */}
-      <div style={{ margin: '1.5rem 0' }}>
+      <div id="heatmap-section" style={{ margin: '1.5rem 0' }}>
         <Heatmap compact={true} />
       </div>
 

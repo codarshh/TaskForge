@@ -65,7 +65,7 @@ export default function WeeklyMonthlyPlanner() {
       </div>
 
       {/* Main Grid: Input Form + Progress Card (left) & Interactive List Board (right) */}
-      <div className="grid-3" style={{ gridTemplateColumns: '1fr 2fr' }}>
+      <div className="planner-layout-grid">
         {/* Left Column: Input Panel & Analytics card */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {/* Add Goal Form */}

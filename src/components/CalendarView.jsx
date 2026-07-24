@@ -82,7 +82,7 @@ export default function CalendarView() {
         </div>
       </div>
 
-      <div className="grid-3" style={{ gridTemplateColumns: '2fr 1fr' }}>
+      <div className="calendar-layout-grid">
         {/* Calendar Grid card */}
         <div className="glass-panel" style={{ padding: '2rem' }}>
           {/* Calendar Header Control */}

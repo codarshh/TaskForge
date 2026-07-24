@@ -896,7 +896,7 @@ export default function Profile({ setActiveTab }) {
         </div>
 
         {/* Card 2: Focus Timer / Study Session */}
-        <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <div id="focus-timer" className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <h3 style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
             ⏱️ Focus Hourglass
           </h3>
@@ -1298,7 +1298,7 @@ export default function Profile({ setActiveTab }) {
       {/* Right Column: Achievements & Developer Profiles */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', flex: 1, minWidth: 0 }}>
         {/* Achievements Dashboard */}
-        <div className="glass-panel achievements-container" style={{ width: '100%' }}>
+        <div id="achievements" className="glass-panel achievements-container" style={{ width: '100%' }}>
             <div className="achievements-header">
               <div className="achievements-title-area">
                 <h3 className="achievements-title">
