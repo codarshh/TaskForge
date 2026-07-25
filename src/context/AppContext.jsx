@@ -28,6 +28,32 @@ export const AppProvider = ({ children }) => {
 
   // Authentication State
   const [user, setUser] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
+      const userParam = urlParams.get('user');
+      if (token && userParam) {
+        try {
+          const parsed = JSON.parse(decodeURIComponent(userParam));
+          if (!parsed.developerProfiles) {
+            parsed.developerProfiles = {
+              leetcode: { username: '', profileUrl: '', connected: false },
+              codeforces: { username: '', profileUrl: '', connected: false },
+              github: { username: '', profileUrl: '', connected: false },
+              codechef: { username: '', profileUrl: '', connected: false },
+              hackerrank: { username: '', profileUrl: '', connected: false },
+              geeksforgeeks: { username: '', profileUrl: '', connected: false }
+            };
+          }
+          localStorage.setItem('taskforge_token', token);
+          localStorage.setItem('taskforge_mock_user', JSON.stringify(parsed));
+          return parsed;
+        } catch (e) {
+          console.error('Error parsing OAuth user from URL:', e);
+        }
+      }
+    }
+
     const savedUser = localStorage.getItem('taskforge_mock_user');
     if (savedUser) {
       try {
@@ -49,9 +75,17 @@ export const AppProvider = ({ children }) => {
     }
     return null;
   });
+
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('token') && urlParams.get('user')) {
+        return true;
+      }
+    }
     return localStorage.getItem('taskforge_mock_user') !== null;
   });
+
   const [authError, setAuthError] = useState(null);
   const [authSuccess, setAuthSuccess] = useState(null);
 
@@ -64,20 +98,9 @@ export const AppProvider = ({ children }) => {
       const errorParam = urlParams.get('error');
 
       if (token && userParam) {
-        try {
-          const parsedUser = JSON.parse(decodeURIComponent(userParam));
-          localStorage.setItem('taskforge_token', token);
-          localStorage.setItem('taskforge_mock_user', JSON.stringify(parsedUser));
-          setUser(parsedUser);
-          setIsAuthenticated(true);
-          
-          // Clean up the URL by removing the query parameters
-          const cleanUrl = window.location.origin + window.location.pathname;
-          window.history.replaceState({}, document.title, cleanUrl);
-        } catch (e) {
-          console.error('Error parsing OAuth user data:', e);
-          setAuthError('OAuth verification failed');
-        }
+        // Clean up the URL by removing the query parameters
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
       } else if (errorParam) {
         setAuthError(`OAuth login failed: ${errorParam.replace(/_/g, ' ')}`);
         

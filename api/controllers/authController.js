@@ -448,8 +448,15 @@ export const githubCallback = async (req, res) => {
 
     const newAccessToken = generateToken(user._id);
 
-    const userObj = user.toObject ? user.toObject() : { ...user };
-    delete userObj.passwordHash;
+    const userObj = {
+      _id: user._id,
+      fullName: user.fullName,
+      username: user.username,
+      email: user.email,
+      bio: user.bio || 'Productivity Explorer',
+      profileImage: user.profileImage,
+      authProviders: user.authProviders
+    };
 
     // Redirect user to the frontend with token and user object
     return res.redirect(
