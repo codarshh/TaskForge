@@ -349,9 +349,12 @@ export const googleLogin = async (req, res) => {
 
 export const githubCallback = async (req, res) => {
   const { code } = req.query;
-  const frontendUrl = process.env.NODE_ENV === 'development' 
-    ? 'http://localhost:5173' 
-    : '';
+  const host = req.headers['x-forwarded-host'] || req.headers.host || '';
+  const protocol = req.headers['x-forwarded-proto'] || 'http';
+  
+  const frontendUrl = (host.includes('localhost') || host.includes('127.0.0.1'))
+    ? 'http://localhost:5173'
+    : `${protocol}://${host}`;
 
   if (!code) {
     return res.redirect(`${frontendUrl}/?error=no_code_provided`);
