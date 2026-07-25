@@ -347,6 +347,118 @@ export const googleLogin = async (req, res) => {
   }
 };
 
+export const githubCallback = async (req, res) => {
+  const { code } = req.query;
+  const frontendUrl = process.env.NODE_ENV === 'development' 
+    ? 'http://localhost:5173' 
+    : '';
+
+  if (!code) {
+    return res.redirect(`${frontendUrl}/?error=no_code_provided`);
+  }
+
+  try {
+    // Exchange Authorization Code for Access Token
+    const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        client_id: process.env.GITHUB_CLIENT_ID,
+        client_secret: process.env.GITHUB_CLIENT_SECRET,
+        code
+      })
+    });
+
+    const tokenData = await tokenResponse.json();
+    if (!tokenResponse.ok || !tokenData.access_token) {
+      console.error('GitHub token exchange failed:', tokenData);
+      return res.redirect(`${frontendUrl}/?error=token_exchange_failed`);
+    }
+
+    const githubAccessToken = tokenData.access_token;
+
+    // Fetch user details
+    const userResponse = await fetch('https://api.github.com/user', {
+      headers: {
+        'Authorization': `Bearer ${githubAccessToken}`,
+        'User-Agent': 'TaskForge-App'
+      }
+    });
+
+    const githubUser = await userResponse.json();
+    if (!userResponse.ok || !githubUser.id) {
+      console.error('GitHub user profile fetch failed:', githubUser);
+      return res.redirect(`${frontendUrl}/?error=profile_fetch_failed`);
+    }
+
+    // Fetch user emails (since user.email might be private)
+    const emailsResponse = await fetch('https://api.github.com/user/emails', {
+      headers: {
+        'Authorization': `Bearer ${githubAccessToken}`,
+        'User-Agent': 'TaskForge-App'
+      }
+    });
+
+    let email = githubUser.email;
+    if (emailsResponse.ok) {
+      const emails = await emailsResponse.json();
+      const primaryEmail = emails.find(e => e.primary);
+      if (primaryEmail) {
+        email = primaryEmail.email;
+      } else if (emails.length > 0) {
+        email = emails[0].email;
+      }
+    }
+
+    if (!email) {
+      email = `${githubUser.login}@users.noreply.github.com`;
+    }
+
+    let user = await dbService.findUserByEmail(email);
+    if (user) {
+      // Link GitHub provider if not already linked
+      const providers = user.authProviders || [];
+      if (!providers.includes('GitHub')) {
+        providers.push('GitHub');
+      }
+      user = await dbService.updateUser(user._id, {
+        authProviders: providers,
+        githubId: githubUser.id.toString(),
+        emailVerified: true
+      });
+    } else {
+      const mockPasswordHash = await bcrypt.hash('github_fallback_password_123', 10);
+      user = await dbService.createUser({
+        fullName: githubUser.name || githubUser.login,
+        username: githubUser.login || email.split('@')[0],
+        email,
+        passwordHash: mockPasswordHash,
+        authProviders: ['GitHub'],
+        githubId: githubUser.id.toString(),
+        profileImage: githubUser.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(githubUser.name || githubUser.login)}`,
+        emailVerified: true
+      });
+    }
+
+    const newAccessToken = generateToken(user._id);
+
+    const userObj = user.toObject ? user.toObject() : { ...user };
+    delete userObj.passwordHash;
+
+    // Redirect user to the frontend with token and user object
+    return res.redirect(
+      `${frontendUrl}/?token=${newAccessToken}&user=${encodeURIComponent(JSON.stringify(userObj))}`
+    );
+  } catch (error) {
+    console.error('GitHub OAuth backend error:', error);
+    return res.redirect(`${frontendUrl}/?error=server_error`);
+  }
+};
+
+
 export const getUserData = async (req, res) => {
   const userId = req.user._id;
   try {

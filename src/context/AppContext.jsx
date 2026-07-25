@@ -55,6 +55,39 @@ export const AppProvider = ({ children }) => {
   const [authError, setAuthError] = useState(null);
   const [authSuccess, setAuthSuccess] = useState(null);
 
+  // Handle OAuth Redirect URL parsing on startup
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
+      const userParam = urlParams.get('user');
+      const errorParam = urlParams.get('error');
+
+      if (token && userParam) {
+        try {
+          const parsedUser = JSON.parse(decodeURIComponent(userParam));
+          localStorage.setItem('taskforge_token', token);
+          localStorage.setItem('taskforge_mock_user', JSON.stringify(parsedUser));
+          setUser(parsedUser);
+          setIsAuthenticated(true);
+          
+          // Clean up the URL by removing the query parameters
+          const cleanUrl = window.location.origin + window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
+        } catch (e) {
+          console.error('Error parsing OAuth user data:', e);
+          setAuthError('OAuth verification failed');
+        }
+      } else if (errorParam) {
+        setAuthError(`OAuth login failed: ${errorParam.replace(/_/g, ' ')}`);
+        
+        // Clean up URL error params
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    }
+  }, []);
+
   // Sync mock user to localStorage
   useEffect(() => {
     if (user) {
@@ -499,45 +532,49 @@ export const AppProvider = ({ children }) => {
   const loginWithGitHub = async () => {
     setAuthError(null);
     setAuthSuccess(null);
-    const mockGithubId = 'git_' + Math.random().toString(36).substr(2, 9);
     try {
-      const response = await fetch(`${API_BASE}/api/auth/oauth/simulate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          provider: 'GitHub',
-          oauthId: mockGithubId,
-          email: 'github_dev@github.com',
-          fullName: 'GitHub Developer',
-          profileImage: 'https://api.dicebear.com/7.x/initials/svg?seed=GithubDev',
-          username: 'GitHub_Dev'
-        })
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        setAuthError(data.message || 'GitHub OAuth failed');
-        return false;
+      const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
+
+      // Fallback to simulation if client ID is dummy or not configured
+      if (!clientId || clientId.includes('mock_github') || clientId.includes('dummy')) {
+        console.warn('[GitHub Auth] Using simulated OAuth fallback - please configure VITE_GITHUB_CLIENT_ID in your .env');
+        const mockGithubId = 'git_' + Math.random().toString(36).substr(2, 9);
+        const response = await fetch(`${API_BASE}/api/auth/oauth/simulate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: 'GitHub',
+            oauthId: mockGithubId,
+            email: 'github_dev@github.com',
+            fullName: 'GitHub Developer',
+            profileImage: 'https://api.dicebear.com/7.x/initials/svg?seed=GithubDev',
+            username: 'GitHub_Dev'
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          setAuthError(data.message || 'GitHub OAuth failed');
+          return false;
+        }
+        setUser(data.user);
+        setIsAuthenticated(true);
+        localStorage.setItem('taskforge_token', data.accessToken);
+        localStorage.setItem('taskforge_mock_user', JSON.stringify(data.user));
+        return true;
       }
-      setUser(data.user);
-      setIsAuthenticated(true);
-      localStorage.setItem('taskforge_token', data.accessToken);
-      localStorage.setItem('taskforge_mock_user', JSON.stringify(data.user));
-      return true;
+
+      // Real GitHub OAuth redirect flow
+      const callback = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? 'http://localhost:5000/api/auth/github/callback'
+        : 'https://taskforge-workspace.vercel.app/api/auth/github/callback';
+
+      const githubUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(callback)}&scope=read:user user:email`;
+      window.location.href = githubUrl;
+      return new Promise(() => {}); // never resolves because page redirects
     } catch (err) {
-      console.warn('[Auth Server Offline] Falling back to simulated GitHub login', err);
-      const mockUser = {
-        id: mockGithubId,
-        _id: mockGithubId,
-        username: 'GitHub_Dev',
-        fullName: 'GitHub Developer',
-        email: 'github_dev@github.com',
-        bio: 'Logged in via GitHub',
-        authProviders: ['GitHub']
-      };
-      setUser(mockUser);
-      setIsAuthenticated(true);
-      localStorage.setItem('taskforge_mock_user', JSON.stringify(mockUser));
-      return true;
+      console.error('GitHub Login initialization failed:', err);
+      setAuthError('GitHub Login initialization failed');
+      return false;
     }
   };
 

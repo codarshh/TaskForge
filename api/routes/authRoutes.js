@@ -9,6 +9,7 @@ import {
   logout,
   deleteAccount,
   googleLogin,
+  githubCallback,
   getUserData,
   saveUserData
 } from '../controllers/authController.js';
@@ -27,6 +28,9 @@ router.delete('/account', requireAuth, deleteAccount);
 
 // Google OAuth
 router.post('/google', googleLogin);
+
+// GitHub OAuth
+router.get('/github/callback', githubCallback);
 
 // Unified Dashboard Data Persistance
 router.get('/data', requireAuth, getUserData);
