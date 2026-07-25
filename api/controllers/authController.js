@@ -361,6 +361,8 @@ export const githubCallback = async (req, res) => {
   }
 
   try {
+    const redirect_uri = `${protocol}://${host}/api/auth/github/callback`;
+
     // Exchange Authorization Code for Access Token
     const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
       method: 'POST',
@@ -371,14 +373,16 @@ export const githubCallback = async (req, res) => {
       body: JSON.stringify({
         client_id: process.env.GITHUB_CLIENT_ID,
         client_secret: process.env.GITHUB_CLIENT_SECRET,
-        code
+        code,
+        redirect_uri
       })
     });
 
     const tokenData = await tokenResponse.json();
-    if (!tokenResponse.ok || !tokenData.access_token) {
-      console.error('GitHub token exchange failed:', tokenData);
-      return res.redirect(`${frontendUrl}/?error=token_exchange_failed`);
+    if (!tokenResponse.ok || !tokenData.access_token || tokenData.error) {
+      console.error('GitHub token exchange failed. Response status:', tokenResponse.status, 'Data:', tokenData);
+      const errDetails = tokenData.error_description || tokenData.error || 'token_exchange_failed';
+      return res.redirect(`${frontendUrl}/?error=${encodeURIComponent(errDetails)}`);
     }
 
     const githubAccessToken = tokenData.access_token;
