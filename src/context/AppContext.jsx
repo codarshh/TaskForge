@@ -8,6 +8,24 @@ const API_BASE = (typeof window !== 'undefined' && (window.location.hostname ===
 export const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
+  // Helper: Get active study session date string YYYY-MM-DD for a given timestamp
+  const getSessionDateStringForTimestamp = (timestamp) => {
+    const d = new Date(timestamp);
+    // If it's before 4 AM, consider it the previous day
+    if (d.getHours() < 4) {
+      d.setDate(d.getDate() - 1);
+    }
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Helper: Get formatted date string YYYY-MM-DD for current session
+  const getTodayString = () => {
+    return getSessionDateStringForTimestamp(Date.now());
+  };
+
   const defaultMockUser = {
     id: 'default_user',
     _id: 'default_user',
@@ -126,6 +144,7 @@ export const AppProvider = ({ children }) => {
   const [weeklyObjectives, setWeeklyObjectives] = useState([]);
   const [monthlyGoals, setMonthlyGoals] = useState([]);
   const [history, setHistory] = useState({}); // Date string YYYY-MM-DD -> { completedCount, totalCount, score }
+  const [sessionDate, setSessionDate] = useState(() => getTodayString());
   
   // Theme State
   const [theme, setTheme] = useState('dark');
@@ -189,8 +208,35 @@ export const AppProvider = ({ children }) => {
         const savedMonthly = localStorage.getItem(`taskforge_monthly_${userId}`);
         const savedHistory = localStorage.getItem(`taskforge_history_${userId}`);
 
+        const currentSessionDate = getTodayString();
+        let initialTasks = [];
+        
+        if (savedTasks) {
+          const parsed = JSON.parse(savedTasks);
+          const lastSavedDate = localStorage.getItem(`taskforge_session_date_${userId}`);
+          
+          let isNewDay = false;
+          if (lastSavedDate) {
+            isNewDay = lastSavedDate !== currentSessionDate;
+          } else if (parsed.length > 0) {
+            const mostRecentTaskTime = Math.max(...parsed.map(t => t.createdAt || 0));
+            if (mostRecentTaskTime > 0) {
+              const taskSessionDate = getSessionDateStringForTimestamp(mostRecentTaskTime);
+              isNewDay = taskSessionDate !== currentSessionDate;
+            }
+          }
+          
+          if (isNewDay) {
+            initialTasks = [];
+          } else {
+            initialTasks = parsed;
+          }
+        }
+        localStorage.setItem(`taskforge_session_date_${userId}`, currentSessionDate);
+        setSessionDate(currentSessionDate);
+
         // Set initial state from local storage (instant UI feedback)
-        setTasks(savedTasks ? JSON.parse(savedTasks) : []);
+        setTasks(initialTasks);
         setFutureTasks(savedFutureTasks ? JSON.parse(savedFutureTasks) : []);
         setWeeklyObjectives(savedWeekly ? JSON.parse(savedWeekly) : []);
         setMonthlyGoals(savedMonthly ? JSON.parse(savedMonthly) : []);
@@ -205,7 +251,26 @@ export const AppProvider = ({ children }) => {
             });
             if (response.ok) {
               const data = await response.json();
-              setTasks(data.tasks || []);
+              
+              let serverTasks = data.tasks || [];
+              const lastSavedDateServer = localStorage.getItem(`taskforge_session_date_${userId}`);
+              let isNewDayServer = false;
+              
+              if (lastSavedDateServer) {
+                isNewDayServer = lastSavedDateServer !== currentSessionDate;
+              } else if (serverTasks.length > 0) {
+                const mostRecentTaskTime = Math.max(...serverTasks.map(t => t.createdAt || 0));
+                if (mostRecentTaskTime > 0) {
+                  const taskSessionDate = getSessionDateStringForTimestamp(mostRecentTaskTime);
+                  isNewDayServer = taskSessionDate !== currentSessionDate;
+                }
+              }
+              
+              if (isNewDayServer) {
+                serverTasks = [];
+              }
+
+              setTasks(serverTasks);
               setFutureTasks(data.futureTasks || []);
               setWeeklyObjectives(data.weeklyObjectives || []);
               setMonthlyGoals(data.monthlyGoals || []);
@@ -218,7 +283,7 @@ export const AppProvider = ({ children }) => {
               }
 
               // Update offline cache
-              localStorage.setItem(`taskforge_tasks_${userId}`, JSON.stringify(data.tasks || []));
+              localStorage.setItem(`taskforge_tasks_${userId}`, JSON.stringify(serverTasks));
               localStorage.setItem(`taskforge_future_${userId}`, JSON.stringify(data.futureTasks || []));
               localStorage.setItem(`taskforge_weekly_${userId}`, JSON.stringify(data.weeklyObjectives || []));
               localStorage.setItem(`taskforge_monthly_${userId}`, JSON.stringify(data.monthlyGoals || []));
@@ -267,20 +332,10 @@ export const AppProvider = ({ children }) => {
     return () => clearTimeout(delayDebounce);
   }, [tasks, futureTasks, weeklyObjectives, monthlyGoals, history, user]);
 
-  // Helper: Get formatted date string YYYY-MM-DD
-  const getTodayString = () => {
-    const d = new Date();
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
   // Run Date Scheduler & Sync on load/login
   useEffect(() => {
     if (user && futureTasks.length > 0) {
-      const todayStr = getTodayString();
-      const tasksToMove = futureTasks.filter(t => t.scheduledDate <= todayStr);
+      const tasksToMove = futureTasks.filter(t => t.scheduledDate <= sessionDate);
       
       if (tasksToMove.length > 0) {
         // Add to active tasks
@@ -301,23 +356,22 @@ export const AppProvider = ({ children }) => {
         setTasks(prev => [...prev, ...newActiveTasks]);
         
         // Remove from future tasks
-        setFutureTasks(prev => prev.filter(t => t.scheduledDate > todayStr));
+        setFutureTasks(prev => prev.filter(t => t.scheduledDate > sessionDate));
       }
     }
-  }, [user, futureTasks]);
+  }, [user, futureTasks, sessionDate]);
 
   // Dynamically record history log whenever today's tasks change
   useEffect(() => {
     if (user && tasks.length > 0) {
-      const todayStr = getTodayString();
       const completedCount = tasks.filter(t => t.completed).length;
       const totalCount = tasks.length;
       const rate = Math.round((completedCount / totalCount) * 100);
 
       setHistory(prev => {
         const updated = { ...prev };
-        updated[todayStr] = {
-          date: todayStr,
+        updated[sessionDate] = {
+          date: sessionDate,
           completed: completedCount,
           total: totalCount,
           rate: rate,
@@ -326,7 +380,26 @@ export const AppProvider = ({ children }) => {
         return updated;
       });
     }
-  }, [tasks, user]);
+  }, [tasks, user, sessionDate]);
+
+  // Periodic check for rollover (e.g. if the user keeps the app open past 4 AM)
+  useEffect(() => {
+    if (!user) return;
+    const userId = user._id || user.id;
+
+    const interval = setInterval(() => {
+      const currentSessionStr = getTodayString();
+      const lastSavedDate = localStorage.getItem(`taskforge_session_date_${userId}`);
+      if (lastSavedDate && lastSavedDate !== currentSessionStr) {
+        // Rollover! Clear active tasks for the new day
+        setTasks([]);
+        setSessionDate(currentSessionStr);
+        localStorage.setItem(`taskforge_session_date_${userId}`, currentSessionStr);
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, [user]);
 
   // Authentication Handlers
   const validatePasswordStr = (pw) => {
