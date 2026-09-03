@@ -99,7 +99,7 @@ export default function TaskManager() {
 
   // Form states (shared by Add/Edit)
   const [taskTitle, setTaskTitle] = useState('');
-  const [taskCategory, setTaskCategory] = useState('Personal');
+  const [taskCategory, setTaskCategory] = useState('Study');
   const [taskPriority, setTaskPriority] = useState('medium');
   const [taskDueTime, setTaskDueTime] = useState('');
   const [taskEstimatedTime, setTaskEstimatedTime] = useState(0);
@@ -126,7 +126,7 @@ export default function TaskManager() {
   // Open Add Modal
   const openAddModal = () => {
     setTaskTitle('');
-    setTaskCategory('Personal');
+    setTaskCategory('Study');
     setTaskPriority('medium');
     setTaskDueTime('');
     setTaskEstimatedTime(0);
@@ -158,7 +158,7 @@ export default function TaskManager() {
   const openEditModal = (task) => {
     setActiveTaskToEdit(task);
     setTaskTitle(task.title);
-    setTaskCategory(task.category || 'Personal');
+    setTaskCategory(task.category || 'Study');
     setTaskPriority(task.priority || 'medium');
     setTaskDueTime(task.dueTime || '');
     setTaskEstimatedTime(task.estimatedTime || 0);

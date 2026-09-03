@@ -864,7 +864,7 @@ export const AppProvider = ({ children }) => {
   };
 
   // Task Operations
-  const addTask = (title, category = 'Personal', priority = 'medium', dueTime = '', estimatedTime = 0, notes = '') => {
+  const addTask = (title, category = 'Study', priority = 'medium', dueTime = '', estimatedTime = 0, notes = '') => {
     const newTask = {
       id: 'task_' + Math.random().toString(36).substr(2, 9),
       title,
