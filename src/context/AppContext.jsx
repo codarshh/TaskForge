@@ -151,7 +151,10 @@ export const AppProvider = ({ children }) => {
   const themeVars = themeVariables[theme] || themeVariables.dark;
 
   // Global Task View Mode (List vs Kanban)
-  const [taskViewMode, setTaskViewMode] = useState(() => localStorage.getItem('taskforge_view_preference') || 'kanban');
+  const [taskViewMode, setTaskViewMode] = useState(() => {
+    localStorage.setItem('taskforge_view_preference', 'list');
+    return 'list';
+  });
 
   const updateTaskViewMode = (mode) => {
     setTaskViewMode(mode);

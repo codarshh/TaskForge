@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
 import { 
   Search, 
@@ -29,7 +29,6 @@ export default function TaskManager() {
     moveTaskStatus,
     updateTask, 
     deleteTask,
-    taskViewMode,
     updateTaskViewMode
   } = useContext(AppContext);
 
@@ -39,8 +38,24 @@ export default function TaskManager() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedPriority, setSelectedPriority] = useState('All');
   const [sortBy, setSortBy] = useState('createdAt'); // 'createdAt' | 'priority' | 'dueTime' | 'estimatedTime'
-  const viewMode = taskViewMode;
-  const setViewMode = updateTaskViewMode;
+  const [viewMode, setViewMode] = useState('list');
+
+  useEffect(() => {
+    // Ensure viewMode defaults to list when Daily Tasks is opened
+    if (updateTaskViewMode) updateTaskViewMode('list');
+    localStorage.setItem('taskforge_view_preference', 'list');
+
+    // Reset viewMode to list when navigating away so reopening Daily Tasks defaults to List view
+    return () => {
+      if (updateTaskViewMode) updateTaskViewMode('list');
+      localStorage.setItem('taskforge_view_preference', 'list');
+    };
+  }, [updateTaskViewMode]);
+
+  const handleViewModeChange = (mode) => {
+    setViewMode(mode);
+    if (updateTaskViewMode) updateTaskViewMode(mode);
+  };
   const [draggedOverCol, setDraggedOverCol] = useState(null);
 
   // HTML5 Drag and Drop handlers
@@ -372,7 +387,7 @@ export default function TaskManager() {
           <div className="kanban-view-controls">
             <button 
               className={`kanban-view-btn ${viewMode === 'kanban' ? 'active' : ''}`}
-              onClick={() => { setViewMode('kanban'); localStorage.setItem('taskforge_view_preference', 'kanban'); }}
+              onClick={() => handleViewModeChange('kanban')}
               title="Kanban View"
             >
               <LayoutGrid size={15} />
@@ -380,7 +395,7 @@ export default function TaskManager() {
             </button>
             <button 
               className={`kanban-view-btn ${viewMode === 'list' ? 'active' : ''}`}
-              onClick={() => { setViewMode('list'); localStorage.setItem('taskforge_view_preference', 'list'); }}
+              onClick={() => handleViewModeChange('list')}
               title="List View"
             >
               <List size={15} />
