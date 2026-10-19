@@ -28,21 +28,7 @@ function AppContent() {
     setIsSidebarOpen(false);
   }, [activeTab]);
 
-  // Handle remember me session cleanup on unload
-  useEffect(() => {
-    const handleUnload = () => {
-      const rememberMe = localStorage.getItem('taskforge_remember_me');
-      if (rememberMe === 'false') {
-        localStorage.removeItem('taskforge_token');
-        localStorage.removeItem('taskforge_active_user');
-        localStorage.removeItem('taskforge_refresh_token');
-      }
-    };
-    window.addEventListener('beforeunload', handleUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleUnload);
-    };
-  }, []);
+
 
   // Monitor task completion for celebration
   useEffect(() => {

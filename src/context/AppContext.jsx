@@ -728,6 +728,8 @@ export const AppProvider = ({ children }) => {
     } catch (err) {
       console.warn('[Auth Server Offline] Logging out locally', err);
     }
+    // clear remember_me flag on explicit logout
+    localStorage.removeItem('taskforge_remember_me');
     logoutLocal();
   };
 
@@ -882,6 +884,13 @@ export const AppProvider = ({ children }) => {
     setTasks(prev => [newTask, ...prev]);
   };
 
+  // Persist tasks to localStorage whenever they change
+  useEffect(() => {
+    if (user) {
+      const userId = user._id || user.id;
+      localStorage.setItem(`taskforge_tasks_${userId}`, JSON.stringify(tasks));
+    }
+  }, [tasks, user]);
   const toggleTaskCompleted = (id) => {
     setTasks(prev => prev.map(t => {
       if (t.id === id) {
@@ -947,6 +956,13 @@ export const AppProvider = ({ children }) => {
     setFutureTasks(prev => [newFutureTask, ...prev]);
   };
 
+  // Persist future tasks to localStorage whenever they change
+  useEffect(() => {
+    if (user) {
+      const userId = user._id || user.id;
+      localStorage.setItem(`taskforge_future_${userId}`, JSON.stringify(futureTasks));
+    }
+  }, [futureTasks, user]);
   const deleteFutureTask = (id) => {
     setFutureTasks(prev => prev.filter(t => t.id !== id));
   };
@@ -962,6 +978,13 @@ export const AppProvider = ({ children }) => {
     setWeeklyObjectives(prev => [...prev, newObj]);
   };
 
+  // Persist weekly objectives to localStorage whenever they change
+  useEffect(() => {
+    if (user) {
+      const userId = user._id || user.id;
+      localStorage.setItem(`taskforge_weekly_${userId}`, JSON.stringify(weeklyObjectives));
+    }
+  }, [weeklyObjectives, user]);
   const toggleWeeklyObjective = (id) => {
     setWeeklyObjectives(prev => prev.map(o => (o.id === id ? { ...o, completed: !o.completed } : o)));
   };
@@ -980,6 +1003,13 @@ export const AppProvider = ({ children }) => {
     setMonthlyGoals(prev => [...prev, newGoal]);
   };
 
+  // Persist monthly goals to localStorage whenever they change
+  useEffect(() => {
+    if (user) {
+      const userId = user._id || user.id;
+      localStorage.setItem(`taskforge_monthly_${userId}`, JSON.stringify(monthlyGoals));
+    }
+  }, [monthlyGoals, user]);
   const toggleMonthlyGoal = (id) => {
     setMonthlyGoals(prev => prev.map(g => (g.id === id ? { ...g, completed: !g.completed } : g)));
   };
@@ -1012,6 +1042,13 @@ export const AppProvider = ({ children }) => {
     downloadAnchor.remove();
   };
 
+  // Persist entire history to localStorage whenever it changes
+  useEffect(() => {
+    if (user) {
+      const userId = user._id || user.id;
+      localStorage.setItem(`taskforge_history_${userId}`, JSON.stringify(history));
+    }
+  }, [history, user]);
   const importBackup = (jsonString) => {
     if (!user) return false;
     try {
@@ -1050,11 +1087,12 @@ export const AppProvider = ({ children }) => {
       setWeeklyObjectives([]);
       setMonthlyGoals([]);
       setHistory({});
-      localStorage.removeItem(`taskforge_tasks_${user.id}`);
-      localStorage.removeItem(`taskforge_future_${user.id}`);
-      localStorage.removeItem(`taskforge_weekly_${user.id}`);
-      localStorage.removeItem(`taskforge_monthly_${user.id}`);
-      localStorage.removeItem(`taskforge_history_${user.id}`);
+      const userId = user._id || user.id;
+      localStorage.removeItem(`taskforge_tasks_${userId}`);
+      localStorage.removeItem(`taskforge_future_${userId}`);
+      localStorage.removeItem(`taskforge_weekly_${userId}`);
+      localStorage.removeItem(`taskforge_monthly_${userId}`);
+      localStorage.removeItem(`taskforge_history_${userId}`);
       localStorage.removeItem('taskforge_view_mode');
     }
   };
